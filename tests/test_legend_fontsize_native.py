@@ -68,6 +68,11 @@ def native14():
     fig.savefig("Leg.pdf")
 
 
+def native48():
+    fig, _ = _fig(fontsize=48)
+    fig.savefig("Leg.pdf")
+
+
 def native7pad():
     fig, _ = _fig(fontsize=7, borderpad=1.2)
     fig.savefig("Leg.pdf")
@@ -136,15 +141,24 @@ def _size(man):
     return (w, h)
 
 
-@pytest.mark.parametrize(("size", "entry"), [(7, "native7"), (14, "native14")])
+@pytest.mark.parametrize(("size", "entry"), [(7, "native7"), (14, "native14"), (48, "native48")])
 def test_scalar_fontsize_matches_native_legend(library, hot, size, entry):
     base = _size(_man(hot))
     got = _man(hot, [{"gid": LEG, "prop": "fontsize", "value": size}])
     want = _fresh(library, entry=entry)
     assert _box(got) == _box(want)
-    # 判据活着：框确实变了（10 pt → 7 / 14 pt，不是两侧都停在原样）
+    # 判据活着：框确实变了（10 pt → 7 / 14 / 48 pt，不是两侧都停在原样）
     assert _size(got) != base
     assert _val(got, T0, "fontsize") == _val(got, T1, "fontsize") == size
+    # Both corner scaling and the text inspector must admit the rendered size.
+    for gid, prop in (
+        (LEG, "fontsize"),
+        (LEG, "title_fontsize"),
+        (T0, "fontsize"),
+        (TITLE, "fontsize"),
+    ):
+        field = next(f for f in _el(got, gid)["editable"] if f["prop"] == prop)
+        assert field["min"] <= size <= field["max"]
     _man(hot)
 
 

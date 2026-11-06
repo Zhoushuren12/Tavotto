@@ -1829,7 +1829,11 @@ def _family_faces_attr() -> dict:
     return {"option_faces": faces} if faces else {}
 
 
-def _text_fields(t) -> list[dict]:
+# Bounds are in script points; a reduced panel can need much larger source text.
+_LEGEND_FONTSIZE_MAX = 144
+
+
+def _text_fields(t, *, fontsize_max: float = 36) -> list[dict]:
     alpha = t.get_alpha()
     fam = (t.get_fontfamily() or ["serif"])[0]
     fam_opts = _family_options()
@@ -1899,7 +1903,7 @@ def _text_fields(t) -> list[dict]:
             "type": "number",
             "value": round(float(t.get_fontsize()), 2),
             "min": 3,
-            "max": 36,
+            "max": fontsize_max,
             "step": 0.5,
             "unit": "pt",
         },
@@ -3448,7 +3452,7 @@ def _legend_fields(leg) -> list[dict]:
             "type": "number",
             "value": round(size, 2) if size > 0 else 8,
             "min": 3,
-            "max": 24,
+            "max": _LEGEND_FONTSIZE_MAX,
             "step": 0.5,
             "unit": "pt",
         },
@@ -3460,7 +3464,7 @@ def _legend_fields(leg) -> list[dict]:
             "type": "number",
             "value": round(float(leg.get_title().get_fontsize()), 2),
             "min": 3,
-            "max": 24,
+            "max": _LEGEND_FONTSIZE_MAX,
             "step": 0.5,
             "unit": "pt",
             "group": "样式",
@@ -4575,13 +4579,17 @@ def _fields_for(el, state: FigState) -> list[dict]:
         if getattr(artist, "_mm_offsetbox_box", None) is not None:
             # 框里的文字：落位、旋转、对齐归打包器（见 `_register_offsetbox_texts`）
             return [f for f in _text_fields(artist) if f["prop"] not in _OFFSETBOX_TEXT_FIXED]
+        if role == "legend_text":
+            return _text_fields(artist, fontsize_max=_LEGEND_FONTSIZE_MAX)
         return _text_fields(artist)
     if key == "legend_text":
         # 一段文字 + 一个条目。`visible` 由条目级的实现接管（整项进出图例盒），
         # 文字自己那条不再单独出现——同一个名字两套语义是最坏的那种冗余
-        return [f for f in _text_fields(artist) if f["prop"] != "visible"] + _legend_entry_fields(
-            artist, state, gid
-        )
+        return [
+            f
+            for f in _text_fields(artist, fontsize_max=_LEGEND_FONTSIZE_MAX)
+            if f["prop"] != "visible"
+        ] + _legend_entry_fields(artist, state, gid)
     if key == "line":
         return _without_dead_zorder(artist, _line_fields(artist, state, gid))
     if key == "legend":
